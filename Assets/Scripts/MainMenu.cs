@@ -11,8 +11,8 @@ public class MainMenu : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _textWidth;
     [SerializeField] private TextMeshProUGUI _textHeight;
     [SerializeField] private TMP_InputField _inputProjectName;
+    [SerializeField] private TextMeshProUGUI _rulesText;
 
-    /// <summary>Инициализирует слайдеры и обновляет подписи.</summary>
     private void Start()
     {
         _sliderWidth.minValue = 0;
@@ -23,46 +23,58 @@ public class MainMenu : MonoBehaviour
         _sliderHeight.maxValue = 10;
         _sliderHeight.wholeNumbers = true;
 
-        UpdateWidth();
-        UpdateHeight();
+        _sliderWidth.onValueChanged.AddListener(_ => UpdateLabels());
+        _sliderHeight.onValueChanged.AddListener(_ => UpdateLabels());
+        UpdateLabels();
     }
 
-    /// <summary>Обновляет подписи значений слайдеров каждый кадр.</summary>
-    private void Update()
-    {
-        UpdateWidth();
-        UpdateHeight();
-    }
-
-    /// <summary>Обновляет текст ширины комнаты.</summary>
-    public void UpdateWidth()
+    /// <summary>Обновляет текст рядом со слайдерами.</summary>
+    private void UpdateLabels()
     {
         if (_textWidth != null) _textWidth.text = $"Ширина: {_sliderWidth.value}";
-    }
-
-    /// <summary>Обновляет текст длины комнаты.</summary>
-    public void UpdateHeight()
-    {
         if (_textHeight != null) _textHeight.text = $"Длина: {_sliderHeight.value}";
     }
 
-    /// <summary>Сохраняет настройки комнаты и загружает сцену редактора.</summary>
+    /// <summary>Проверяет корректность параметров комнаты.</summary>
+    private bool ValidateRoom()
+    {
+        var width = (int)_sliderWidth.value;
+        var height = (int)_sliderHeight.value;
+        string name = _inputProjectName != null ? _inputProjectName.text.Trim() : "";
+
+        if (width < 3 || height < 3)
+        {
+            _rulesText.text = "Размер комнаты должен быть не меньше 3x3.";
+            _rulesText.color = Color.red;
+            return false;
+        }
+
+        if (name.Length < 3 || name.Length > 8)
+        {
+            _rulesText.text = "Название проекта: от 3 до 8 символов.";
+            _rulesText.color = Color.red;
+            return false;
+        }
+
+        _rulesText.text = "Все параметры корректны!";
+        _rulesText.color = Color.green;
+        return true;
+    }
+
+    /// <summary>Создаёт комнату, если данные корректны.</summary>
     public void StartProject()
     {
-        var roomSettings = RoomSettings.Instance;
-        roomSettings.ProjectName = _inputProjectName != null ? _inputProjectName.text : string.Empty;
-        roomSettings.RoomWidth   = (int)_sliderWidth.value;
-        roomSettings.RoomHeight  = (int)_sliderHeight.value;
+        if (!ValidateRoom()) return;
 
-        if (!roomSettings.IsRoomValid())
-        {
-            return;
-        }
+        var settings = RoomSettings.Instance;
+        settings.ProjectName = _inputProjectName.text;
+        settings.RoomWidth = (int)_sliderWidth.value;
+        settings.RoomHeight = (int)_sliderHeight.value;
 
         SceneManager.LoadScene(1);
     }
 
-    /// <summary>Выходит из приложения.</summary>
+    /// <summary>Закрывает приложение.</summary>
     public void Exit()
     {
         Application.Quit();

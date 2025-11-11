@@ -15,7 +15,11 @@ public class RoomEditController : MonoBehaviour
     private Material _pendingWallMaterial;
     private GameObject _pendingPrefab;
 
-    /// <summary>Устанавливает текущий режим и очищает временные данные если нужно.</summary>
+    private void Awake()
+    {
+        if (_camera == null) _camera = Camera.main;
+    }
+
     public void SetMode(EditMode mode)
     {
         _mode = mode;
@@ -23,27 +27,18 @@ public class RoomEditController : MonoBehaviour
         if (mode != EditMode.SelectObject) _pendingPrefab = null;
     }
 
-    /// <summary>Включает режим покраски стен выбранным материалом.</summary>
     public void SetPaintWall(Material mat)
     {
         _pendingWallMaterial = mat;
         _mode = EditMode.PaintWall;
     }
 
-    /// <summary>Готовит выбранный префаб для установки на пол.</summary>
     public void SetPendingPrefab(GameObject prefab)
     {
         _pendingPrefab = prefab;
         _mode = EditMode.SelectObject;
     }
 
-    /// <summary>Кэширует ссылку на камеру, если не задана вручную.</summary>
-    private void Awake()
-    {
-        if (_camera == null) _camera = Camera.main;
-    }
-
-    /// <summary>Обрабатывает клик мышью в зависимости от режима.</summary>
     private void Update()
     {
         if (Input.GetMouseButtonDown(0))
@@ -51,14 +46,16 @@ public class RoomEditController : MonoBehaviour
             var hit = Raycast();
             if (hit.transform == null) return;
 
-            if (_mode == EditMode.Delete) TryDelete(hit.transform);
-            else if (_mode == EditMode.PaintWall) TryPaintWall(hit.transform);
-            else if (_mode == EditMode.SelectObject) TrySpawnOnFloorCell(hit);
-            else if (_mode == EditMode.Rotate) TryRotate(hit.transform);
+            switch (_mode)
+            {
+                case EditMode.Delete: TryDelete(hit.transform); break;
+                case EditMode.PaintWall: TryPaintWall(hit.transform); break;
+                case EditMode.SelectObject: TrySpawnOnFloorCell(hit); break;
+                case EditMode.Rotate: TryRotate(hit.transform); break;
+            }
         }
     }
 
-    /// <summary>Делает Raycast из позиции курсора.</summary>
     private RaycastHit Raycast()
     {
         if (_camera == null) return default;
@@ -66,7 +63,6 @@ public class RoomEditController : MonoBehaviour
         return hit;
     }
 
-    /// <summary>Возвращает корневой объект с тегом Object, если клик был по объекту или его дочернему.</summary>
     private Transform GetObjectRootIfValid(Transform t)
     {
         if (t == null) return null;
@@ -75,37 +71,32 @@ public class RoomEditController : MonoBehaviour
         return (p != null && p.CompareTag("Object")) ? p : null;
     }
 
-    /// <summary>Удаляет кликнутый объект с тегом Object.</summary>
     private void TryDelete(Transform t)
     {
         var obj = GetObjectRootIfValid(t);
         if (obj != null) Destroy(obj.gameObject);
     }
 
-    /// <summary>Применяет выбранный материал к сегменту стены.</summary>
     private void TryPaintWall(Transform t)
     {
         if (_pendingWallMaterial == null) return;
-        Transform target = t.CompareTag("Wall") ? t : t.GetComponentInParent<Transform>();
+        var target = t.CompareTag("Wall") ? t : t.GetComponentInParent<Transform>();
         if (target == null || !target.CompareTag("Wall")) return;
-        var r = target.GetComponent<Renderer>();
-        if (r != null) r.material = _pendingWallMaterial;
+        if (target.TryGetComponent(out Renderer r)) r.material = _pendingWallMaterial;
     }
 
-    /// <summary>Спавнит выбранный префаб по центру клетки пола.</summary>
     private void TrySpawnOnFloorCell(RaycastHit hit)
     {
         if (_pendingPrefab == null) return;
         if (!hit.transform.CompareTag("Floor")) return;
-        var col = hit.collider as BoxCollider;
-        if (col == null) return;
+        if (!hit.collider.TryGetComponent(out BoxCollider col)) return;
+
         var b = col.bounds;
         var pos = new Vector3(b.center.x, b.max.y + _spawnYOffset, b.center.z);
         var go = Instantiate(_pendingPrefab, pos, Quaternion.identity);
         go.tag = "Object";
     }
 
-    /// <summary>Поворачивает кликнутый объект на 90° вокруг оси Y.</summary>
     private void TryRotate(Transform t)
     {
         var obj = GetObjectRootIfValid(t);

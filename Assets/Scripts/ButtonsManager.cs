@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class ButtonsManager : MonoBehaviour
 {
@@ -19,35 +20,56 @@ public class ButtonsManager : MonoBehaviour
         if (_edit != null) _edit.SetMode(EditMode.None);
     }
 
-    /// <summary>Закрывает панели и переводит в режим None.</summary>
+    /// <summary>Полный выход из сцены: очистка и возврат в меню.</summary>
     public void OnExit()
     {
         CloseAllPanels();
         if (_edit != null) _edit.SetMode(EditMode.None);
+
+        // Очистка всех объектов
+        foreach (var obj in GameObject.FindGameObjectsWithTag("Object"))
+            Destroy(obj);
+
+        foreach (var wall in GameObject.FindGameObjectsWithTag("Wall"))
+            Destroy(wall);
+
+        foreach (var floor in GameObject.FindGameObjectsWithTag("Floor"))
+            Destroy(floor);
+
+        // Сброс настроек комнаты
+        if (RoomSettings.Instance != null)
+        {
+            Destroy(RoomSettings.Instance.gameObject);
+            RoomSettings.Instance = null;
+        }
+
+        // Возврат в главное меню
+        SceneManager.LoadScene(0);
     }
 
-    /// <summary>Закрывает панели и переводит в режим Rotate.</summary>
+
+    /// <summary>Переключает в режим поворота.</summary>
     public void OnRotate()
     {
         CloseAllPanels();
         if (_edit != null) _edit.SetMode(EditMode.Rotate);
     }
 
-    /// <summary>Закрывает панели и переводит в режим Delete.</summary>
+    /// <summary>Переключает в режим удаления.</summary>
     public void OnDelete()
     {
         CloseAllPanels();
         if (_edit != null) _edit.SetMode(EditMode.Delete);
     }
 
-    /// <summary>Открывает панель выбора материала стен.</summary>
+    /// <summary>Открывает панель выбора материала.</summary>
     public void OnSelectMaterialOpen()
     {
         CloseAllPanels();
         _panelChoiceMaterial.SetActive(true);
     }
 
-    /// <summary>Открывает панель выбора категорий объектов.</summary>
+    /// <summary>Открывает панель категорий объектов.</summary>
     public void OnSelectObjectOpen()
     {
         CloseAllPanels();
@@ -75,7 +97,7 @@ public class ButtonsManager : MonoBehaviour
         _panelDecor.SetActive(true);
     }
 
-    /// <summary>Возвращает из панели предметов к списку категорий.</summary>
+    /// <summary>Возвращает к списку категорий.</summary>
     public void OnBackToCategories()
     {
         _panelRest.SetActive(false);
@@ -84,7 +106,7 @@ public class ButtonsManager : MonoBehaviour
         _panelChoiceCategories.SetActive(true);
     }
 
-    /// <summary>Закрывает все панели редактора.</summary>
+    /// <summary>Закрывает все панели.</summary>
     public void CloseAllPanels()
     {
         _panelChoiceMaterial.SetActive(false);
